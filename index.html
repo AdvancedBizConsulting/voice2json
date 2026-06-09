@@ -16,6 +16,17 @@
   --radius:12px;--radius-sm:8px;--mono:'JetBrains Mono',monospace;
   --bar-h:80px;
 }
+body.light{
+  --bg:#f6f8fa;--surface:#ffffff;--surface2:#f0f2f5;--border:#d0d7de;
+  --accent:#2563eb;--accent-glow:rgba(37,99,235,0.12);
+  --red:#dc2626;--red-glow:rgba(220,38,38,0.15);
+  --green:#16a34a;--yellow:#d97706;
+  --text:#1f2328;--text-muted:#57606a;--text-dim:#afb8c1;
+}
+.btn-theme{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+  background:transparent;color:var(--text-muted);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.btn-theme:hover{border-color:var(--accent);color:var(--accent)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow-x:hidden}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
@@ -128,17 +139,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .wa-hint{position:fixed;bottom:calc(var(--bar-h) + 4px);left:0;right:0;
   text-align:center;font-size:0.7rem;color:var(--text-dim);pointer-events:none;z-index:199;padding:3px}
 
-/* Note */
-.wa-note{position:fixed;bottom:var(--bar-h);left:0;right:0;
-  background:var(--surface);border-top:1px solid var(--border);
-  padding:8px 16px;z-index:198;display:none}
-.wa-note.show{display:block}
-.wa-note textarea{width:100%;background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);font-family:inherit;
-  font-size:0.8rem;padding:7px 10px;resize:none;height:44px;outline:none;transition:border-color .2s}
-.wa-note textarea:focus{border-color:var(--accent)}
-.wa-note-lbl{font-size:0.64rem;color:var(--text-dim);margin-bottom:4px;
-  text-transform:uppercase;letter-spacing:.4px}
+
 
 /* Hidden audio */
 #audioPlayer{display:none}
@@ -198,7 +199,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   .wa-bar{max-width:700px;left:50%;right:auto;transform:translateX(-50%);
     border-radius:var(--radius) var(--radius) 0 0;
     border-left:1px solid var(--border);border-right:1px solid var(--border)}
-  .wa-hint,.wa-note{max-width:700px;left:50%;right:auto;transform:translateX(-50%)}
+  .wa-hint{max-width:700px;left:50%;right:auto;transform:translateX(-50%)}
 }
 </style>
 </head>
@@ -208,6 +209,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   <div class="logo">Vocal<span>Med</span></div>
   <div class="header-right">
     <div class="header-status" id="headerStatus">—</div>
+    <button class="btn-theme" id="btnTheme" onclick="toggleTheme()" title="Changer le thème">
+      <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    </button>
     <button class="btn-analysis" onclick="showAnalysis()">Analyse</button>
   </div>
 </header>
@@ -277,12 +286,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 
 <!-- WA hint -->
 <div class="wa-hint" id="waHint">Appuyez sur le micro pour commencer</div>
-
-<!-- Note area -->
-<div class="wa-note" id="waNoteArea">
-  <div class="wa-note-lbl">Remarque (optionnel)</div>
-  <textarea id="clipNote" placeholder="ex. hésitation, bruit soudain…"></textarea>
-</div>
 
 <!-- WA Bar -->
 <div class="wa-bar idle" id="waBar">
@@ -386,6 +389,7 @@ const S = {
 // INIT
 // ═══════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   initUser();
   detectDevice();
   await loadSentences();
@@ -560,7 +564,7 @@ function setBar(state) {
   const main   = document.getElementById('waMain');
   const mIcon  = document.getElementById('waMainIcon');
   const hint   = document.getElementById('waHint');
-  const note   = document.getElementById('waNoteArea');
+  const note   = null;
 
   // Reset classes
   bar.className   = 'wa-bar ' + (state === 'idle' ? 'idle' : 'active');
@@ -568,7 +572,6 @@ function setBar(state) {
   mid.className   = 'wa-middle' + (state !== 'idle' ? ' show' : '');
   play.className  = 'wa-play'  + (state === 'paused' || state === 'stopped' ? ' show' : '');
   pr.className    = 'wa-pr'   + (state === 'recording' || state === 'paused' ? ' show' : '');
-  note.className  = 'wa-note' + (state === 'paused' || state === 'stopped' ? ' show' : '');
 
   // Dot blink
   dot.className = 'wa-dot' + (state === 'recording' ? ' blink' : '');
@@ -585,8 +588,8 @@ function setBar(state) {
     main.className = 'wa-main mic';
     mIcon.innerHTML = micPath();
   } else if (state === 'recording') {
-    main.className = 'wa-main mic rec';
-    mIcon.innerHTML = micPath();
+    main.className = 'wa-main send';
+    mIcon.innerHTML = sendPath();
   } else {
     main.className = 'wa-main send';
     mIcon.innerHTML = sendPath();
@@ -710,7 +713,7 @@ async function sendClip() {
   const s        = S.sessionSentences[S.currentIndex];
   const clipId   = S.sessionId + '_' + String(S.currentIndex).padStart(3, '0');
   const filename = clipId + '.' + S.pendingExt;
-  const note     = document.getElementById('clipNote').value.trim();
+  const note     = null;
 
   const clip = {
     clip_id:         clipId,
@@ -737,15 +740,17 @@ async function sendClip() {
   S.currentIndex++;
   saveSession();
 
-  // Upload audio + push JSON concurrently
-  commitAudio(blob, filename);
-  pushJSON();
+  // Capture blob NOW before any cleanup clears it
+  const audioBlob = blob;
 
-  document.getElementById('clipNote').value = '';
   stopPlay();
   if (S.objectURL) { URL.revokeObjectURL(S.objectURL); S.objectURL = null; }
   document.getElementById('audioPlayer').src = '';
   S.pendingBlob = null;
+
+  // Fire-and-forget uploads AFTER cleanup references are done
+  commitAudio(audioBlob, filename);
+  pushJSON();
 
   renderSentence();
   setBar('idle');
@@ -763,7 +768,6 @@ function confirmDiscard() {
   clearInterval(S.timerInterval); stopWave();
   if (S.objectURL) { URL.revokeObjectURL(S.objectURL); S.objectURL = null; }
   document.getElementById('audioPlayer').src = '';
-  document.getElementById('clipNote').value = '';
   // swap sentence
   const used   = new Set(S.sessionSentences.map(x => x.sentence));
   const extras = S.sentences.filter(s => !used.has(s.sentence));
@@ -867,6 +871,12 @@ function stopWave() {
 // GITHUB
 // ═══════════════════════════════
 async function githubPut(path, base64, message) {
+  // Validate config first
+  if (!CONFIG.GITHUB_TOKEN || CONFIG.GITHUB_TOKEN === 'YOUR_GITHUB_TOKEN_HERE')
+    throw new Error('Token manquant dans CONFIG');
+  if (!CONFIG.GITHUB_REPO || CONFIG.GITHUB_REPO === 'your-username/your-repo')
+    throw new Error('Repo manquant dans CONFIG');
+
   let sha = null;
   try {
     const r = await fetch('https://api.github.com/repos/' + CONFIG.GITHUB_REPO + '/contents/' + path,
@@ -881,22 +891,26 @@ async function githubPut(path, base64, message) {
     body: JSON.stringify(body),
   });
   if (!r.ok) {
-    let detail = 'GitHub ' + r.status;
-    try { const d = await r.json(); detail += ': ' + (d.message || JSON.stringify(d)); } catch {}
+    let detail = 'GitHub HTTP ' + r.status;
+    try { const d = await r.json(); detail += ' – ' + (d.message || JSON.stringify(d)); } catch {}
     throw new Error(detail);
   }
 }
 
 async function commitAudio(blob, filename) {
   setUpload('uploading', '⬆ Audio…');
+  console.log('[commitAudio] start', filename, 'size:', blob?.size, 'type:', blob?.type);
   try {
+    if (!blob || blob.size === 0) throw new Error('Blob vide (taille 0)');
     const b64 = await blobToB64(blob);
+    console.log('[commitAudio] b64 length:', b64.length, 'path:', CONFIG.GITHUB_AUDIOS_PATH + filename);
     await githubPut(CONFIG.GITHUB_AUDIOS_PATH + filename, b64, 'audio ' + filename);
     setUpload('ok', '✓');
+    console.log('[commitAudio] success:', filename);
   } catch (e) {
-    setUpload('error', '✗ ' + e.message);
-    console.error('[commitAudio]', e);
-    showToast('Erreur upload audio: ' + e.message, 'err');
+    setUpload('error', '✗');
+    console.error('[commitAudio] FAILED:', e.message);
+    showToast('Audio non sauvegardé : ' + e.message, 'err');
   }
 }
 
@@ -915,15 +929,10 @@ async function pushJSON() {
   } catch (e) { saveLocally(payload); console.error(e); }
 }
 
-async function blobToB64(blob) {
-  const buf = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let bin = '';
-  // chunk to avoid call stack overflow on large audio files
-  for (let i = 0; i < bytes.length; i += 8192) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  return btoa(bin);
+function blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(blob);
+  });
 }
 function setUpload(type, label) {
   document.getElementById('uploadDot').className = 'upload-dot ' + type;
@@ -953,7 +962,6 @@ function showAnalysis() {
   document.getElementById('analysisView').classList.add('show');
   document.getElementById('waHint').style.display      = 'none';
   document.getElementById('waBar').style.display       = 'none';
-  document.getElementById('waNoteArea').style.display  = 'none';
   renderSessions();
 }
 function showRecording() {
@@ -1014,6 +1022,23 @@ function exportJSON() {
 // ═══════════════════════════════
 // TOAST
 // ═══════════════════════════════
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  ls('vocalmed_theme', isLight ? 'light' : 'dark');
+  updateThemeIcon(isLight);
+}
+function updateThemeIcon(isLight) {
+  document.getElementById('themeIcon').innerHTML = isLight
+    ? `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" stroke="none"/>`
+    : `<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+       <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+       <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+       <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+}
+function initTheme() {
+  const saved = ls('vocalmed_theme');
+  if (saved === 'light') { document.body.classList.add('light'); updateThemeIcon(true); }
+}
 let _tt;
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');
