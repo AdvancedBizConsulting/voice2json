@@ -880,7 +880,7 @@ async function githubPut(path, base64, message) {
   let sha = null;
   try {
     const r = await fetch('https://api.github.com/repos/' + CONFIG.GITHUB_REPO + '/contents/' + path,
-      { headers: { 'Authorization': 'token ' + CONFIG.GITHUB_TOKEN, 'Cache-Control': 'no-cache' } });
+      { headers: { 'Authorization': 'token ' + CONFIG.GITHUB_TOKEN } });
     if (r.ok) { const d = await r.json(); sha = d.sha || null; }
   } catch {}
   const body = { message, content: base64, branch: CONFIG.GITHUB_BRANCH };
