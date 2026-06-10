@@ -329,7 +329,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 <div class="modal" id="discardModal">
   <div class="modal-box">
     <h3>Supprimer cet enregistrement ?</h3>
-    <p>L'enregistrement sera supprimé. La phrase sera remplacée.</p>
+    <p>L'enregistrement sera supprimé. Vous pourrez réessayer la même phrase.</p>
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal('discardModal')">Annuler</button>
       <button class="btn-confirm" onclick="confirmDiscard()">Supprimer</button>
@@ -352,9 +352,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════
-// CONFIG — fill in your credentials
-// ═══════════════════════════════
 const CONFIG = {
   // Google OAuth2
   GOOGLE_CLIENT_ID:     '529477360899-o85eefhdof4sj65tea7ksg8gcpup3jtk.apps.googleusercontent.com',
@@ -366,7 +363,7 @@ const CONFIG = {
   DRIVE_RESULTS_FOLDER: '19OBQpJhmJ0RMeCJRXh7s3r9yZpr720ce',
 
 
-  DRIVE_SENTENCES_FILE_ID: '1fEfnWyORIt5JOGBA8wI-gTH0gPREKW7E', // Drive file ID of sentences.json
+  DRIVE_SENTENCES_FILE_ID: '1fEfnWyORIt5JOGBA8wI-gTH0gPREKW7E',
   SESSION_SIZE:  30,
 };
 
@@ -414,7 +411,9 @@ function updateThemeIcon(isLight) {
 }
 function initTheme() {
   const saved = ls('vocalmed_theme');
-  if (saved === 'light') { document.body.classList.add('light'); updateThemeIcon(true); }
+  // Default is light — only switch to dark if explicitly saved
+  if (saved === 'dark') { updateThemeIcon(false); }
+  else { document.body.classList.add('light'); updateThemeIcon(true); }
 }
 
 // ═══════════════════════════════
@@ -796,9 +795,6 @@ function confirmDiscard() {
   clearInterval(S.timerInterval); stopWave();
   if (S.objectURL) { URL.revokeObjectURL(S.objectURL); S.objectURL = null; }
   document.getElementById('audioPlayer').src = '';
-  const used   = new Set(S.sessionSentences.map(x => x.sentence));
-  const extras = S.sentences.filter(s => !used.has(s.sentence));
-  if (extras.length) S.sessionSentences[S.currentIndex] = extras[Math.floor(Math.random() * extras.length)];
   renderSentence();
   setBar('idle');
   showToast('Enregistrement supprimé', 'info');
