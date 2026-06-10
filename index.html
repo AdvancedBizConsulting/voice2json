@@ -223,7 +223,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
     <div class="progress-label">Phrase <strong id="sentenceIndex">1</strong></div>
     <div class="meta-right">
       <div class="upload-status">
-        <div class="upload-dot" id="uploadDot"></div>
+        <div class="upload-dot" id="sentencesDot" title="Phrases"></div>
+        <span id="sentencesLabel" style="margin-right:8px">—</span>
+        <div class="upload-dot" id="uploadDot" title="Audio"></div>
         <span id="uploadLabel">—</span>
       </div>
       <button class="btn-end" onclick="askEnd()">Terminer</button>
@@ -463,6 +465,8 @@ function detectDevice() {
 // SENTENCES
 // ═══════════════════════════════
 async function loadSentences() {
+  document.getElementById('sentencesDot').className   = 'upload-dot uploading';
+  document.getElementById('sentencesLabel').textContent = '…';
   try {
     const token = await getAccessToken();
     const r = await fetch(
@@ -471,8 +475,12 @@ async function loadSentences() {
     );
     if (!r.ok) throw new Error('Drive HTTP ' + r.status);
     S.sentences = await r.json();
+    document.getElementById('sentencesDot').className   = 'upload-dot ok';
+    document.getElementById('sentencesLabel').textContent = S.sentences.length + ' phrases';
   } catch (e) {
     console.error('[loadSentences]', e.message);
+    document.getElementById('sentencesDot').className   = 'upload-dot error';
+    document.getElementById('sentencesLabel').textContent = 'Erreur';
     S.sentences = [
       { sentence: "Prescrivez de l'amoxicilline 500mg trois fois par jour pendant 7 jours", num_orders: 1 },
       { sentence: "Ordonnez une NFS et un bilan hépatique complet", num_orders: 2 },
