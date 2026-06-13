@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); color: var(--color-text-primary); padding: 1.5rem; }
+
+.section { margin-bottom: 1.5rem; }
+label { font-size: 13px; color: var(--color-text-secondary); display: block; margin-bottom: 6px; }
+
+input[type="text"], select {
+  width: 100%; padding: 8px 12px; font-size: 14px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+}
+input[type="text"]:focus { outline: none; border-color: var(--color-border-primary); }
+
+.drop-zone {
+  border: 1.5px dashed var(--color-border-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  background: var(--color-background-secondary);
+}
+.drop-zone:hover, .drop-zone.over { background: var(--color-background-tertiary); border-color: var(--color-border-primary); }
+.drop-zone p { font-size: 14px; color: var(--color-text-secondary); margin-top: 8px; }
+.drop-zone span { font-size: 13px; color: var(--color-text-tertiary); }
+
+.options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.toggle-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 0.5px solid var(--color-border-tertiary);
+  font-size: 14px;
+}
+.toggle-row:last-child { border-bottom: none; }
+
+.toggle {
+  width: 36px; height: 20px; border-radius: 10px;
+  background: var(--color-border-secondary); border: none; cursor: pointer;
+  position: relative; transition: background 0.15s;
+}
+.toggle.on { background: #378ADD; }
+.toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%; background: white; transition: left 0.15s;
+}
+.toggle.on::after { left: 19px; }
+
+.btn-run {
+  width: 100%; padding: 11px; font-size: 14px; font-weight: 500;
+  background: var(--color-text-primary); color: var(--color-background-primary);
+  border: none; border-radius: var(--border-radius-md); cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-run:hover { opacity: 0.85; }
+.btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.result-box {
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem 1.25rem;
+}
+.result-box pre {
+  font-family: var(--font-mono); font-size: 12.5px;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap; word-break: break-all;
+  max-height: 260px; overflow-y: auto;
+}
+.transcript-text {
+  font-size: 15px; line-height: 1.7;
+  color: var(--color-text-primary);
+  margin-bottom: 1rem;
+}
+.meta-row {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.badge {
+  font-size: 12px; padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--color-background-info);
+  color: var(--color-text-info);
+}
+.badge.success { background: var(--color-background-success); color: var(--color-text-success); }
+.badge.warn { background: var(--color-background-warning); color: var(--color-text-warning); }
+
+.status-msg { font-size: 13px; color: var(--color-text-secondary); margin-top: 8px; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--color-border-secondary); border-top-color: var(--color-text-primary); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { color: var(--color-text-danger); font-size: 13px; margin-top: 8px; }
+.tab-row { display: flex; gap: 4px; margin-bottom: 1rem; }
+.tab { padding: 5px 14px; font-size: 13px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); cursor: pointer; background: transparent; color: var(--color-text-secondary); }
+.tab.active { background: var(--color-text-primary); color: var(--color-background-primary); border-color: transparent; }
+.utterance { padding: 6px 0; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 14px; }
+.utterance:last-child { border-bottom: none; }
+.speaker { font-size: 11px; font-weight: 500; color: var(--color-text-info); margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<h2 style="sr-only">AssemblyAI transcription tester</h2>
+
+<div class="section">
+  <label>API key</label>
+  <input type="text" id="apiKey" placeholder="Paste your AssemblyAI API key" />
+</div>
+
+<div class="section">
+  <label>Audio file</label>
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <i class="ti ti-file-music" style="font-size:28px; color: var(--color-text-tertiary)" aria-hidden="true"></i>
+    <p id="fileName">Drop an audio file or click to browse</p>
+    <span>MP3, WAV, M4A, FLAC, OGG — up to ~500MB</span>
+  </div>
+  <input type="file" id="fileInput" accept="audio/*,video/*" style="display:none" />
+</div>
+
+<div class="section">
+  <label>Options</label>
+  <div class="toggle-row">
+    <span>Speaker diarization</span>
+    <button class="toggle" id="tog-diarize" onclick="toggleBtn(this)"></button>
+  </div>
+  <div class="toggle-row">
+    <span>Auto-detect language</span>
+    <button class="toggle on" id="tog-lang" onclick="toggleBtn(this)"></button>
+  </div>
+  <div class="toggle-row">
+    <span>Punctuation &amp; formatting</span>
+    <button class="toggle on" id="tog-punct" onclick="toggleBtn(this)"></button>
+  </div>
+  <div class="toggle-row">
+    <span>Confidence scores</span>
+    <button class="toggle" id="tog-conf" onclick="toggleBtn(this)"></button>
+  </div>
+</div>
+
+<div class="section">
+  <label>Language (if auto-detect is off)</label>
+  <select id="langCode">
+    <option value="fr">French (fr)</option>
+    <option value="en" selected>English (en)</option>
+    <option value="es">Spanish (es)</option>
+    <option value="de">German (de)</option>
+    <option value="it">Italian (it)</option>
+    <option value="pt">Portuguese (pt)</option>
+    <option value="nl">Dutch (nl)</option>
+    <option value="ja">Japanese (ja)</option>
+    <option value="zh">Chinese (zh)</option>
+    <option value="ko">Korean (ko)</option>
+  </select>
+</div>
+
+<div class="section">
+  <button class="btn-run" id="runBtn" onclick="runTranscription()" disabled>
+    <i class="ti ti-player-play" aria-hidden="true"></i> Transcribe
+  </button>
+  <div id="statusMsg" class="status-msg" style="display:none"></div>
+  <div id="errorMsg" class="error" style="display:none"></div>
+</div>
+
+<div id="resultSection" style="display:none">
+  <div class="tab-row">
+    <button class="tab active" onclick="showTab('transcript', this)">Transcript</button>
+    <button class="tab" onclick="showTab('speakers', this)">Speakers</button>
+    <button class="tab" onclick="showTab('raw', this)">Raw JSON</button>
+  </div>
+  <div class="result-box">
+    <div id="tab-transcript"></div>
+    <div id="tab-speakers" style="display:none"></div>
+    <div id="tab-raw" style="display:none"><pre id="rawJson"></pre></div>
+  </div>
+</div>
+
+<script>
+let audioFile = null;
+let lastResult = null;
+
+function toggleBtn(el) {
+  el.classList.toggle('on');
+}
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) setFile(e.target.files[0]);
+});
+
+function setFile(f) {
+  audioFile = f;
+  document.getElementById('fileName').textContent = f.name + ' (' + (f.size / 1024 / 1024).toFixed(1) + ' MB)';
+  checkReady();
+}
+
+document.getElementById('apiKey').addEventListener('input', checkReady);
+function checkReady() {
+  const key = document.getElementById('apiKey').value.trim();
+  document.getElementById('runBtn').disabled = !(key && audioFile);
+}
+
+function showStatus(msg, spinner=false) {
+  const el = document.getElementById('statusMsg');
+  el.style.display = 'block';
+  el.innerHTML = spinner ? `<span class="spinner"></span>${msg}` : msg;
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+function clearMessages() {
+  document.getElementById('statusMsg').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('resultSection').style.display = 'none';
+}
+
+async function runTranscription() {
+  clearMessages();
+  const key = document.getElementById('apiKey').value.trim();
+  const diarize = document.getElementById('tog-diarize').classList.contains('on');
+  const autoLang = document.getElementById('tog-lang').classList.contains('on');
+  const punct = document.getElementById('tog-punct').classList.contains('on');
+  const conf = document.getElementById('tog-conf').classList.contains('on');
+  const lang = document.getElementById('langCode').value;
+
+  document.getElementById('runBtn').disabled = true;
+
+  try {
+    showStatus('Uploading audio...', true);
+    const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
+      method: 'POST',
+      headers: { authorization: key, 'content-type': 'application/octet-stream' },
+      body: audioFile
+    });
+    if (!uploadRes.ok) { const t = await uploadRes.text(); throw new Error(`Upload failed (${uploadRes.status}): ${t}`); }
+    const { upload_url } = await uploadRes.json();
+
+    showStatus('Submitting transcription job...', true);
+    const body = {
+      audio_url: upload_url,
+      speaker_labels: diarize,
+      punctuate: punct,
+      format_text: punct,
+    };
+    if (!autoLang) body.language_code = lang;
+    if (conf) body.word_boost = undefined;
+
+    const subRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: { authorization: key, 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!subRes.ok) { const t = await subRes.text(); throw new Error(`Submit failed (${subRes.status}): ${t}`); }
+    const { id } = await subRes.json();
+
+    showStatus(`Waiting for result (ID: ${id})...`, true);
+    let result;
+    for (let i = 0; i < 120; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+        headers: { authorization: key }
+      });
+      result = await pollRes.json();
+      if (result.status === 'completed') break;
+      if (result.status === 'error') throw new Error('Transcription error: ' + result.error);
+      showStatus(`Processing... (${result.status})`, true);
+    }
+    if (!result || result.status !== 'completed') throw new Error('Timed out waiting for result.');
+
+    lastResult = result;
+    renderResult(result, diarize);
+
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('statusMsg').style.display = 'none';
+  }
+}
+
+function renderResult(r, diarize) {
+  document.getElementById('resultSection').style.display = 'block';
+
+  const meta = document.getElementById('tab-transcript');
+  const confidence = r.confidence ? Math.round(r.confidence * 100) + '% confidence' : '';
+  const lang = r.language_code || '';
+  const dur = r.audio_duration ? Math.round(r.audio_duration) + 's' : '';
+  meta.innerHTML = `
+    <div class="meta-row">
+      <span class="badge success">Completed</span>
+      ${lang ? `<span class="badge">${lang}</span>` : ''}
+      ${dur ? `<span class="badge">${dur}</span>` : ''}
+      ${confidence ? `<span class="badge warn">${confidence}</span>` : ''}
+    </div>
+    <div class="transcript-text">${r.text || '<em style="color:var(--color-text-tertiary)">No speech detected.</em>'}</div>
+  `;
+
+  const spk = document.getElementById('tab-speakers');
+  if (diarize && r.utterances && r.utterances.length) {
+    spk.innerHTML = r.utterances.map(u => `
+      <div class="utterance">
+        <div class="speaker">Speaker ${u.speaker} &nbsp;·&nbsp; ${fmt(u.start)}–${fmt(u.end)}</div>
+        <div>${u.text}</div>
+      </div>
+    `).join('');
+  } else {
+    spk.innerHTML = `<p style="font-size:14px; color:var(--color-text-tertiary)">Speaker diarization was not enabled or no utterances returned.</p>`;
+  }
+
+  document.getElementById('rawJson').textContent = JSON.stringify(r, null, 2);
+}
+
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+function showTab(name, btn) {
+  ['transcript','speakers','raw'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
